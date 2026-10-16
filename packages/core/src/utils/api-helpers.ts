@@ -1,11 +1,15 @@
-import type { ApiError, ApiFailure, ApiSuccess } from "../types/api/responses";
+import type { ApiResponse } from "../types/api/responses";
 
 export const ResponseUtil = {
-	success<T>(data: T, message?: string): ApiSuccess<T> {
-		return message === undefined ? { success: true, data } : { success: true, message, data };
-	},
-
-	error(message: string, error: ApiError): ApiFailure {
-		return { success: false, message, data: null, error };
-	},
+	success: <T>(data: T, message?: string): ApiResponse<T> => ({
+		success: true,
+		message,
+		data,
+	}),
+	error: (error: unknown, message?: string): ApiResponse<null> => ({
+		success: false,
+		message,
+		data: null,
+		error,
+	}),
 };
