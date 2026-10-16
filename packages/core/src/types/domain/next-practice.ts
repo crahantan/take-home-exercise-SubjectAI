@@ -32,11 +32,12 @@ export const practiceEvidenceSchema = z.object({
 	thinEvidence: z.boolean(),
 });
 
-/** Placeholder shape. It is finalized once the open decisions in CLAUDE.md are settled. */
 export const nextPracticeResponseSchema = z.object({
 	studentId: z.string(),
+	firstName: z.string(),
 	skillId: z.string(),
 	skillName: z.string(),
+	evidence: practiceEvidenceSchema,
 	explanation: z.string(),
 	source: explanationSourceSchema,
 	fallbackReason: fallbackReasonSchema.nullable(),
