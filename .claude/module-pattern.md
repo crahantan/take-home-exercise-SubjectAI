@@ -5,7 +5,7 @@ Adapted from the SWGAAF `financial-entities` module: same layers, same naming, s
 ## Differences from SWGAAF
 
 - Routes chain only `validateRequest(schema)` and the controller. There is no `requireAuth` or `requirePermission`.
-- There is no database. The service works on the cleaned attempts held in memory.
+- There is no database. The service reads the export and cleans it once, in its constructor, and keeps the clean attempts in memory. The business logic is not in the service: cleaning, selection and the explanation pipeline are pure functions in `lib/`, and the service only calls them in order.
 - Errors are written as one JSON line through `lib/logger.ts`, not to a table.
 - The query DTO is typed through the fourth generic of `Request`. SWGAAF passes it in the params slot, which is not what that slot means.
 - There is no control-character scan in `validateRequest`. The schemas are strict, and `student_id` is a closed pattern.
@@ -103,11 +103,25 @@ export const fallbackReasonSchema = z.enum([
 	"disabled",
 ]);
 
-/** Placeholder shape. It is finalized once the open decisions in CLAUDE.md are settled. */
+/** Five results are enough to show a trend without turning the evidence into a long list. */
+export const RECENT_WINDOW = 5;
+
+export const practiceEvidenceSchema = z.object({
+	attempts: z.number().int(),
+	correct: z.number().int(),
+	hints: z.number().int(),
+	/** Oldest first. */
+	recentResults: z.array(z.boolean()).max(RECENT_WINDOW),
+	daysSinceLastAttempt: z.number().int(),
+	thinEvidence: z.boolean(),
+});
+
 export const nextPracticeResponseSchema = z.object({
 	studentId: z.string(),
+	firstName: z.string(),
 	skillId: z.string(),
 	skillName: z.string(),
+	evidence: practiceEvidenceSchema,
 	explanation: z.string(),
 	source: explanationSourceSchema,
 	fallbackReason: fallbackReasonSchema.nullable(),
@@ -117,6 +131,14 @@ export type GetNextPracticeDTO = z.infer<typeof getNextPracticeSchema>["query"];
 export type ExplanationSource = z.infer<typeof explanationSourceSchema>;
 export type FallbackReason = z.infer<typeof fallbackReasonSchema>;
 export type NextPracticeResponse = z.infer<typeof nextPracticeResponseSchema>;
+export type PracticeEvidence = z.infer<typeof practiceEvidenceSchema>;
+
+export interface Selection {
+	skillId: string;
+	skillName: string;
+	score: number;
+	evidence: PracticeEvidence;
+}
 ```
 
 `src/index.ts` (barrel, single entry point)
@@ -124,6 +146,8 @@ export type NextPracticeResponse = z.infer<typeof nextPracticeResponseSchema>;
 ```ts
 export * from "./validators/common";
 export * from "./types/api/responses";
+export * from "./types/domain/attempts";
+export * from "./types/domain/explanation";
 export * from "./types/domain/next-practice";
 export * from "./utils/api-helpers";
 ```
@@ -320,19 +344,78 @@ export const getNextPractice = async (
 };
 ```
 
-`src/modules/next-practice/next-practice.services.ts` (stub until the domain logic exists)
+`src/modules/next-practice/next-practice.services.ts` (orchestrates the pure functions in `lib/`; no HTTP)
 
 ```ts
-import type { GetNextPracticeDTO, NextPracticeResponse } from "@coach/core";
+import { loadRawExport } from "@coach/database";
+import type { ExplanationProvider, GetNextPracticeDTO, NextPracticeResponse } from "@coach/core";
 import { AppError } from "../../lib/app-error";
+import { cleanExport } from "../../lib/cleaning";
+import type { CleanedExport } from "../../lib/cleaning";
+import { getExplanation } from "../../lib/get-explanation";
+import { createProvider, getLlmTimeoutMs, loadPrompt } from "../../lib/llm";
+import { logger } from "../../lib/logger";
+import { selectNextSkill } from "../../lib/selection";
 
 export class NextPracticeService {
+	private readonly data: CleanedExport;
+	private readonly provider: ExplanationProvider | null;
+	private readonly prompt: { version: string; text: string };
+	private readonly timeoutMs: number;
+
+	// The export is read and cleaned once; a bad file or bad config stops the api at startup.
+	constructor() {
+		this.data = cleanExport(loadRawExport());
+		this.provider = createProvider();
+		this.prompt = loadPrompt();
+		this.timeoutMs = getLlmTimeoutMs();
+
+		logger.info({ event: "export_cleaned", report: this.data.report });
+	}
+
 	/**
-	 * Target flow: take the cleaned attempts, select the skill, build the explanation (provider, validation, fallback), log one line.
-	 * Returns null when the student does not exist; the controller turns that into a 404.
+	 * Orchestrates the lib functions. Returns null when the student does not exist; the controller turns that into a 404.
 	 */
-	async getNextPractice(_data: GetNextPracticeDTO): Promise<NextPracticeResponse | null> {
-		throw new AppError("Not implemented yet", 501);
+	async getNextPractice(data: GetNextPracticeDTO): Promise<NextPracticeResponse | null> {
+		const { skills, students, attempts } = this.data;
+
+		const student = students.find((candidate) => candidate.student_id === data.student_id);
+		if (!student) return null;
+
+		const selection = selectNextSkill(attempts, skills, student.student_id);
+		if (!selection) throw new AppError("No attempts found for this student", 404);
+
+		const result = await getExplanation({
+			selection,
+			provider: this.provider,
+			system: this.prompt.text,
+			timeoutMs: this.timeoutMs,
+		});
+
+		logger.info({
+			event: "next_practice_explained",
+			studentId: student.student_id,
+			skillId: selection.skillId,
+			provider: this.provider?.name ?? "none",
+			model: this.provider?.model ?? null,
+			promptVersion: this.prompt.version,
+			latencyMs: result.latencyMs,
+			source: result.source,
+			fallbackReason: result.fallbackReason,
+			invalidRule: result.invalidRule,
+			thinEvidence: selection.evidence.thinEvidence,
+		});
+
+		return {
+			studentId: student.student_id,
+			firstName: student.first_name,
+			skillId: selection.skillId,
+			skillName: selection.skillName,
+			evidence: selection.evidence,
+			explanation: result.explanation,
+			source: result.source,
+			fallbackReason: result.fallbackReason,
+		};
 	}
 }
 ```

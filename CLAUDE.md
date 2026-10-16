@@ -18,10 +18,12 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 │   ├── api/                 Express 5 service, port 3001
 │   │   └── src/
 │   │       ├── app.ts       bootstrap: json, routes, errorHandler, listen
-│   │       ├── lib/         app-error.ts, logger.ts, llm/ (provider implementations + prompts/)
+│   │       ├── lib/         app-error.ts, logger.ts
 │   │       │                cleaning.ts (pure: raw export -> clean attempts + CleaningReport), cleaning.test.ts
 │   │       │                selection.ts (pure: attempts -> chosen skill + evidence), selection.test.ts
-│   │       │                explanation.ts (planned; pure: validation of model output + fallback templates)
+│   │       │                explanation.ts (pure: validation of model output + fallback templates), explanation.test.ts
+│   │       │                get-explanation.ts (calls the provider, validates, falls back, never throws), get-explanation.test.ts
+│   │       │                llm/ ollama.ts, index.ts (loadPrompt, createProvider), prompts/motivation.v1.txt
 │   │       ├── middleware/  validate-request.middleware.ts, error-handler.middleware.ts, index.ts (barrel)
 │   │       └── modules/next-practice/
 │   │           ├── next-practice.routes.ts
@@ -73,14 +75,15 @@ Every module, middleware and bootstrap file follows `.claude/module-pattern.md`,
 ## Commands
 
 - `pnpm install`, `pnpm dev` (api and web in parallel), `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format`, `pnpm format:check`.
-- Environment (documented in `.env.example`): `PORT`, `API_URL`, `LLM_PROVIDER` (`ollama` | `none`), `OLLAMA_URL`, `OLLAMA_MODEL`, `LLM_TIMEOUT_MS`.
+- Environment (documented in `.env.example`): `PORT`, `HOST`, `BASE_API`, `API_URL`, `LLM_PROVIDER` (`ollama` | `none`), `OLLAMA_URL`, `OLLAMA_MODEL`, `LLM_TIMEOUT_MS`.
 - There is no turbo. Plain pnpm workspaces are enough for this size; the README says so.
 
 ## Product rules (settled)
 
-- Data: `attempts.json` stays raw. `cleaning.ts` turns it into clean attempts plus a `CleaningReport` with a count per rule. Every rule is explicit, named, counted, and listed in the README under Assumptions. Exact duplicates are removed by `attempt_id`. The same student seeing the same item on different dates is a legitimate retry and is kept.
-- Selection: a pure, deterministic, explainable function. It returns the chosen skill plus an `evidence` object (attempts, correct, hints, most recent results). Thin evidence is handled explicitly and defended in the README.
-- Explanation pipeline: the provider is called with an `AbortSignal` timeout and returns `unknown`. The result is parsed with a zod schema from `core`, then checked by business rules (length, sentence count, no numbers outside the evidence, no markup or links, no praise the data does not support). Any failure uses the deterministic fallback.
+- Data: `attempts.json` stays raw. `cleaning.ts` turns it into clean attempts plus a `CleaningReport` with a count per rule. Every rule is explicit, named, counted, and listed in the README under Assumptions. Exact duplicates are removed by `attempt_id`. The same student seeing the same item on different dates is a legitimate retry and is kept. Null `seconds_spent` is kept as unknown (never zero). `seconds_spent` below 10 or above 600 is kept for correctness and hints, with the time set to unknown. Attempts dated after `exported_at` are kept and flagged `afterExport`.
+- Selection: a pure, deterministic, explainable function. It returns the chosen skill plus an `evidence` object (attempts, correct, hints, most recent results). The lowest smoothed accuracy `(correct + 1) / (attempts + 2)` wins; ties go to more attempts, then to the lower skill id. Hints and recency are shown as evidence and do not change the choice. Thin evidence (fewer than 3 attempts) is flagged, handled explicitly and defended in the README.
+- Explanation design (hybrid): code writes the evidence sentence, with every number taken from the evidence; the model writes one short motivating sentence with no numbers. What the student reads about their own data is therefore correct even when the model fails.
+- Explanation pipeline: the provider is called with an `AbortSignal` timeout and returns `unknown`. The result is parsed with a zod schema from `core`, then checked by business rules (length, exactly one sentence, no digits at all, no markup or links, no praise the data does not support). Any failure uses the deterministic fallback.
 - Every response says where the text came from: `source: "llm" | "fallback"` and `fallbackReason: "timeout" | "provider_error" | "invalid_output" | "disabled"`. One structured log line per request records provider, model, prompt version, latency, source, and reason. This is how production would show that the model is failing.
 - Provider contract (`ExplanationProvider`) lives in `core`. Implementations live in `apps/api/src/lib/llm/`. Adding a provider means implementing the contract there and registering it in `llm/index.ts`.
 - The prompt is versioned in `apps/api/src/lib/llm/prompts/` (the filename carries the version) and loaded at runtime.
@@ -88,9 +91,7 @@ Every module, middleware and bootstrap file follows `.claude/module-pattern.md`,
 
 ## Open decisions (do not settle silently; ask the author)
 
-- Explanation design: the model writes the whole message, or code writes a deterministic evidence sentence and the model writes one short motivating sentence.
-- The selection formula and how thin evidence is treated.
-- Which cleaning rules apply to missing and extreme `seconds_spent` and to attempts dated after `exported_at`.
+None at the moment.
 
 ## Working agreements
 
