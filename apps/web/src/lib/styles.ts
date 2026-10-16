@@ -10,6 +10,10 @@ p{margin:0 0 1rem}
 .card{background:#fff;border:2px solid #1d4ed8;border-radius:.75rem;padding:1.25rem 1.25rem .25rem;margin-bottom:1rem}
 .label{display:inline-block;margin:0;padding:.125rem .625rem;border-radius:1rem;background:#1d4ed8;color:#fff;font-weight:700}
 .note{color:#4a5568}
+.start{display:flex;align-items:center;justify-content:center;min-height:52px;margin-bottom:1rem;border-radius:.5rem;background:#1d4ed8;color:#fff;font-size:1.125rem;font-weight:700;text-decoration:none}
+.start:focus-visible{outline:3px solid #1d2433;outline-offset:3px}
+.start-note{display:none;margin-bottom:1rem;padding:.75rem 1rem;border-left:4px solid #8a5a00;border-radius:.25rem;background:#fff4d6}
+.start-note:target{display:block}
 details{background:#fff;border:1px solid #9aa5b8;border-radius:.75rem;padding:0 1.25rem;margin-bottom:1rem}
 summary{min-height:44px;padding:.625rem 0;font-weight:700;cursor:pointer}
 details[open] summary{border-bottom:1px solid #d5dbe6;margin-bottom:.75rem}

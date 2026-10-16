@@ -58,5 +58,19 @@ describe("views", () => {
 			options,
 		);
 		expect(short).toContain("Your 3 tries, oldest first:");
+
+		// The start button opens an in-page note, and the skill name inside it is escaped like everywhere else.
+		const hostileSkill = renderPracticePage(
+			{ ...data, skillName: "<script>alert(1)</script>" },
+			options,
+		);
+		expect(practice).toContain(`href="#start"`);
+		expect(practice).toContain("Practice questions are not part of this exercise.");
+		expect(hostileSkill).toContain(
+			"this opens your first question on &lt;script&gt;alert(1)&lt;/script&gt;.",
+		);
+		expect(hostileSkill.toLowerCase()).not.toContain("<script");
+		// The fallback page has no recommendation to start.
+		expect(pages[1]).not.toContain("Start practicing");
 	});
 });
