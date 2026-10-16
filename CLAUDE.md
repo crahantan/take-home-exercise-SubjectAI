@@ -32,10 +32,10 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 │   │           └── index.ts
 │   └── web/                 Express 5 server that renders HTML, port 3000
 │       └── src/
-│           ├── server.ts
-│           ├── api/         HTTP client for apps/api (the only place that fetches)
-│           ├── lib/         escape-html.ts, formatting helpers, last-resort content
-│           └── views/       typed functions that return HTML strings
+│           ├── server.ts    GET / (the one screen), plain 404, one JSON log line per request
+│           ├── api/         client.ts: HTTP client for apps/api (the only place that fetches), client.test.ts
+│           ├── lib/         config.ts, resolve-student.ts, demo-students.ts, last-resort.ts, styles.ts, log.ts, escape-html.ts
+│           └── views/       layout.ts, practice-page.ts, fallback-page.ts, demo-switcher.ts (typed functions that return HTML strings), views.test.ts
 ├── docs/
 │   └── ai-prompts/          prompts given to AI tools, numbered 01-, 02-, ... (author-owned record)
 └── packages/
@@ -75,7 +75,7 @@ Every module, middleware and bootstrap file follows `.claude/module-pattern.md`,
 ## Commands
 
 - `pnpm install`, `pnpm dev` (api and web in parallel), `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format`, `pnpm format:check`.
-- Environment (documented in `.env.example`): `PORT`, `HOST`, `BASE_API`, `API_URL`, `LLM_PROVIDER` (`ollama` | `none`), `OLLAMA_URL`, `OLLAMA_MODEL`, `LLM_TIMEOUT_MS`.
+- Environment (documented in `.env.example`): `PORT`, `HOST`, `BASE_API`, `API_URL`, `WEB_API_TIMEOUT_MS`, `DEMO_STUDENT_SWITCHER`, `DEFAULT_STUDENT_ID`, `LLM_PROVIDER` (`ollama` | `none`), `OLLAMA_URL`, `OLLAMA_MODEL`, `LLM_TIMEOUT_MS`.
 - There is no turbo. Plain pnpm workspaces are enough for this size; the README says so.
 
 ## Product rules (settled)
@@ -88,6 +88,8 @@ Every module, middleware and bootstrap file follows `.claude/module-pattern.md`,
 - Provider contract (`ExplanationProvider`) lives in `core`. Implementations live in `apps/api/src/lib/llm/`. Adding a provider means implementing the contract there and registering it in `llm/index.ts`.
 - The prompt is versioned in `apps/api/src/lib/llm/prompts/` (the filename carries the version) and loaded at runtime.
 - Web: one request from the browser, HTML rendered on the server, CSS inline, no client JavaScript, system fonts, `viewport` meta set. Aim for an initial HTML under about 14 KB (a common rule of thumb for the first TCP round trips). Every dynamic string is HTML-escaped, especially model text. If the API is slow or down, the web server still returns a page with safe, generic content.
+
+- Web copy and controls: the page greets the student by first name. The "view as" student switcher is a demo aid behind `DEMO_STUDENT_SWITCHER` (default on, the page says it is demo only); a real account takes the student id from the signed-in session, never from the query string, which would be an IDOR hole. There is no call-to-action button, because there is no second screen and a button that does nothing is a fake control. The only interaction is a native `<details>` that opens the numbers behind the suggestion. The last-resort page claims nothing about the student.
 
 ## Open decisions (do not settle silently; ask the author)
 
