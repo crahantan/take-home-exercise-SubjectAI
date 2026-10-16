@@ -19,7 +19,7 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 │   │   └── src/
 │   │       ├── app.ts       bootstrap: json, routes, errorHandler, listen
 │   │       ├── lib/         app-error.ts, logger.ts, llm/ (provider implementations + prompts/)
-│   │       ├── middleware/  validate-request.ts, error-handler.ts, index.ts (barrel)
+│   │       ├── middleware/  validate-request.middleware.ts, error-handler.middleware.ts, index.ts (barrel)
 │   │       └── modules/next-practice/
 │   │           ├── next-practice.routes.ts
 │   │           ├── next-practice.controllers.ts
@@ -52,17 +52,21 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 
 Dependency direction: `api -> core, database`; `web -> core`; `core` and `database` depend on nothing internal. `web` never imports `api` code; it talks to it over HTTP and parses the response with the schema from `core`.
 
+## Canonical module pattern
+
+Every module, middleware and bootstrap file follows `.claude/module-pattern.md`, which is adapted from the SWGAAF `financial-entities` module. Read it before writing or changing any of them, and report every deviation.
+
 ## Conventions (carried over from SWGAAF, with deliberate changes)
 
 - TypeScript with ES modules everywhere (`"type": "module"`). Package scope is `@coach/*`, internal dependencies use `"workspace:^"`.
 - Internal packages are consumed as source: `exports` points to `./src/index.ts`. There is no build step, so run with `tsx` and typecheck with `tsc --noEmit`. Deliberate change from SWGAAF: `moduleResolution: "Bundler"` and NO `.js` extensions in relative imports.
 - Import between packages by package name (`@coach/core`), never by relative path. Use `import type` for types (`verbatimModuleSyntax` is on).
 - One `tsconfig.base.json` at the root: strict, `noUncheckedIndexedAccess`, `isolatedModules`, `noEmit`. Each package extends it.
-- Files are kebab-case. Layer suffix in plural: `x.routes.ts`, `x.controllers.ts`, `x.services.ts`. Classes PascalCase, functions and variables camelCase, constants UPPER_SNAKE_CASE. Named exports only, no default exports.
+- Files are kebab-case. Layer suffix in plural: `x.routes.ts`, `x.controllers.ts`, `x.services.ts`. Classes PascalCase, functions and variables camelCase, constants UPPER_SNAKE_CASE. Named exports only, with two exceptions copied from SWGAAF: each `*.routes.ts` default-exports its router (re-exported by `index.ts` as `<camelCase>Router`) and `app.ts` default-exports the app.
 - Zod 4. Every request schema is `z.object({ params, query, body })` and each part is `.strict()`. Types come from `z.infer`, never written twice.
-- Routes chain `validateRequest(schema)` then the controller. Controllers are typed arrow functions with try/catch calling `next(error)`. Services contain no HTTP. A missing resource is `null` from the service and a 404 from the controller.
+- Routes chain `validateRequest(schema)` then the controller. Controllers are typed arrow functions with try/catch calling `next(error)`; the query DTO is typed through the fourth generic of `Request`. Services contain no HTTP. A missing resource is `null` from the service and a 404 from the controller.
 - Every response uses the envelope: success `{ success: true, message?, data }`, error `{ success: false, message, data: null, error }`. Unexpected errors return a generic 500 message; the real error goes to the log only.
-- No `any` (lint error). No floating promises. Comments are sparse, in English, and explain the why, not the what.
+- No `any` (lint error), with one exception: the return type of `validateRequest`, which carries a justified `eslint-disable` comment. No floating promises. Comments are sparse, in English, and explain the why, not the what.
 - Everything in English: code, comments, API messages, student-facing copy. Student-facing text is not localized (no i18n); the README lists localization as a next step.
 - Formatting: Prettier with tabs, double quotes, semicolons, trailing commas, `printWidth` 100. ESLint 9 flat config with `typescript-eslint` and `eslint-config-prettier`.
 

@@ -1,6 +1,12 @@
+import type { GetNextPracticeDTO, NextPracticeResponse } from "@coach/core";
 import { AppError } from "../../lib/app-error";
 
-// Stub: selection and explanation are not written yet.
-export const getNextPractice = async (): Promise<never> => {
-	throw new AppError(501, "NOT_IMPLEMENTED", "Next practice is not implemented yet");
-};
+export class NextPracticeService {
+	/**
+	 * Target flow: take the cleaned attempts, select the skill, build the explanation (provider, validation, fallback), log one line.
+	 * Returns null when the student does not exist; the controller turns that into a 404.
+	 */
+	async getNextPractice(_data: GetNextPracticeDTO): Promise<NextPracticeResponse | null> {
+		throw new AppError("Not implemented yet", 501);
+	}
+}
