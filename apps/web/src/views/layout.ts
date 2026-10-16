@@ -1,11 +1,13 @@
 import { escapeHtml } from "../lib/escape-html";
+import { STYLES } from "../lib/styles";
 
-const STYLES = `
-body{margin:0;font-family:system-ui,sans-serif;line-height:1.5;color:#1b1b1f;background:#f6f6f9}
-main{max-width:36rem;margin:0 auto;padding:2rem 1rem}
-`;
+interface LayoutParams {
+	title: string;
+	/** Already-built HTML. Every dynamic string inside it must have gone through escapeHtml. */
+	body: string;
+}
 
-export const renderLayout = (title: string, body: string): string => `<!doctype html>
+export const renderLayout = ({ title, body }: LayoutParams): string => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
