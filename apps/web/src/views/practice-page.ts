@@ -35,6 +35,8 @@ export const renderPracticePage = (data: NextPracticeResponse, options: PageOpti
 <h2>${escapeHtml(data.skillName)}</h2>
 <p>${escapeHtml(data.explanation)}</p>${aiNote}
 </section>
+<a class="start" href="#start">Start practicing</a>
+<section id="start" class="start-note" role="note">Practice questions are not part of this exercise. In the real app this opens your first question on ${escapeHtml(data.skillName)}.</section>
 <details>
 <summary>See how you did</summary>
 <p>In total: ${attempts} ${attempts === 1 ? "try" : "tries"}, ${correct} right, ${hints} with a hint.</p>
