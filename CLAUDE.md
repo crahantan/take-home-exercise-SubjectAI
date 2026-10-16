@@ -20,14 +20,13 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 │   │       ├── app.ts       bootstrap: json, routes, errorHandler, listen
 │   │       ├── lib/         app-error.ts, logger.ts, llm/ (provider implementations + prompts/)
 │   │       │                cleaning.ts (pure: raw export -> clean attempts + CleaningReport), cleaning.test.ts
+│   │       │                selection.ts (pure: attempts -> chosen skill + evidence), selection.test.ts
+│   │       │                explanation.ts (planned; pure: validation of model output + fallback templates)
 │   │       ├── middleware/  validate-request.middleware.ts, error-handler.middleware.ts, index.ts (barrel)
 │   │       └── modules/next-practice/
 │   │           ├── next-practice.routes.ts
 │   │           ├── next-practice.controllers.ts
 │   │           ├── next-practice.services.ts   orchestration only
-│   │           ├── selection.ts                pure: attempts -> chosen skill + evidence
-│   │           ├── explanation.ts              pure: validation of model output + fallback templates
-│   │           ├── *.test.ts
 │   │           └── index.ts
 │   └── web/                 Express 5 server that renders HTML, port 3000
 │       └── src/
@@ -65,6 +64,7 @@ Every module, middleware and bootstrap file follows `.claude/module-pattern.md`,
 - Files are kebab-case. Layer suffix in plural: `x.routes.ts`, `x.controllers.ts`, `x.services.ts`. Classes PascalCase, functions and variables camelCase, constants UPPER_SNAKE_CASE. Named exports only, with two exceptions copied from SWGAAF: each `*.routes.ts` default-exports its router (re-exported by `index.ts` as `<camelCase>Router`) and `app.ts` default-exports the app.
 - Zod 4. Every request schema is `z.object({ params, query, body })` and each part is `.strict()`. Types come from `z.infer`, never written twice.
 - Routes chain `validateRequest(schema)` then the controller. Controllers are typed arrow functions with try/catch calling `next(error)`; the query DTO is typed through the fourth generic of `Request`. Services contain no HTTP. A missing resource is `null` from the service and a 404 from the controller.
+- All business logic (cleaning, selection, explanation validation and fallback templates) lives as pure functions in `apps/api/src/lib/`, each with its test beside it. The module's service only orchestrates them and contains no HTTP.
 - Every response uses the envelope: success `{ success: true, message?, data }`, error `{ success: false, message, data: null, error }`. Unexpected errors return a generic 500 message; the real error goes to the log only.
 - No `any` (lint error), with one exception: the return type of `validateRequest`, which carries a justified `eslint-disable` comment. No floating promises. Comments are sparse, in English, and explain the why, not the what.
 - Everything in English: code, comments, API messages, student-facing copy. Student-facing text is not localized (no i18n); the README lists localization as a next step.
