@@ -1,18 +1,10 @@
 import { Router } from "express";
-import { z } from "zod";
+import { getNextPracticeSchema } from "@coach/core";
 import { validateRequest } from "../../middleware";
-import { getNextPracticeController } from "./next-practice.controllers";
+import { getNextPractice } from "./next-practice.controllers";
 
-const getNextPracticeSchema = z.object({
-	params: z.object({}).strict(),
-	query: z.object({}).strict(),
-	body: z.object({}).strict(),
-});
+const router: Router = Router();
 
-export const nextPracticeRouter = Router();
+router.get("/", validateRequest(getNextPracticeSchema), getNextPractice);
 
-nextPracticeRouter.get(
-	"/next-practice",
-	validateRequest(getNextPracticeSchema),
-	getNextPracticeController,
-);
+export default router;
