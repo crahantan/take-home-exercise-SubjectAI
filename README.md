@@ -39,17 +39,17 @@ ollama pull qwen2.5:3b
 
 Every environment variable has a default, so `pnpm dev` works without setting anything. The apps read variables from the process environment and there is no `.env` loader (`.env.example` documents them), so to change one, set it in the shell, for example `LLM_PROVIDER=none pnpm dev`. Without Ollama the app still works: the encouraging sentence comes from a fixed template and the response says why (`provider_error`). To skip the model on purpose, set `LLM_PROVIDER=none`.
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PORT` | api 3001, web 3000 | Port of each server |
-| `HOST`, `BASE_API` | `localhost`, `/api` | Where the api listens |
-| `API_URL` | `http://localhost:3001` | Where the web server finds the api |
-| `LLM_PROVIDER` | `ollama` | `ollama` or `none` (any other value fails at startup) |
-| `OLLAMA_URL`, `OLLAMA_MODEL` | `http://localhost:11434`, `qwen2.5:3b` | The local model |
-| `LLM_TIMEOUT_MS` | `6000` | How long the api waits for the model |
-| `WEB_API_TIMEOUT_MS` | `8000` | How long the web server waits for the api. Keep it longer than `LLM_TIMEOUT_MS` |
-| `DEMO_STUDENT_SWITCHER` | `on` | Demo aid, see [section 8](#8-the-student-switcher-is-for-the-demo-only) |
-| `DEFAULT_STUDENT_ID` | `stu_1041` | The student the page shows |
+| Variable                     | Default                                | Meaning                                                                         |
+| ---------------------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
+| `PORT`                       | api 3001, web 3000                     | Port of each server                                                             |
+| `HOST`, `BASE_API`           | `localhost`, `/api`                    | Where the api listens                                                           |
+| `API_URL`                    | `http://localhost:3001`                | Where the web server finds the api                                              |
+| `LLM_PROVIDER`               | `ollama`                               | `ollama` or `none` (any other value fails at startup)                           |
+| `OLLAMA_URL`, `OLLAMA_MODEL` | `http://localhost:11434`, `qwen2.5:3b` | The local model                                                                 |
+| `LLM_TIMEOUT_MS`             | `6000`                                 | How long the api waits for the model                                            |
+| `WEB_API_TIMEOUT_MS`         | `8000`                                 | How long the web server waits for the api. Keep it longer than `LLM_TIMEOUT_MS` |
+| `DEMO_STUDENT_SWITCHER`      | `on`                                   | Demo aid, see [section 8](#8-the-student-switcher-is-for-the-demo-only)         |
+| `DEFAULT_STUDENT_ID`         | `stu_1041`                             | The student the page shows                                                      |
 
 `PORT` is shared by both apps, so setting it in the shell makes `pnpm dev` start both on the same port and they collide. Leave it unset, or start one app at a time.
 
@@ -61,25 +61,25 @@ curl "http://localhost:3001/api/next-practice?student_id=stu_1041"
 
 ```json
 {
-  "success": true,
-  "message": "Next practice skill selected",
-  "data": {
-    "studentId": "stu_1041",
-    "firstName": "Ana",
-    "skillId": "lin_eq_1",
-    "skillName": "Solving one-step linear equations",
-    "evidence": {
-      "attempts": 7,
-      "correct": 2,
-      "hints": 4,
-      "recentResults": [false, false, false, true, false],
-      "daysSinceLastAttempt": 0,
-      "thinEvidence": false
-    },
-    "explanation": "You got 2 of 7 tries right on Solving one-step linear equations, and you used a hint on 4 of them. Take your time and work through each step carefully.",
-    "source": "llm",
-    "fallbackReason": null
-  }
+	"success": true,
+	"message": "Next practice skill selected",
+	"data": {
+		"studentId": "stu_1041",
+		"firstName": "Ana",
+		"skillId": "lin_eq_1",
+		"skillName": "Solving one-step linear equations",
+		"evidence": {
+			"attempts": 7,
+			"correct": 2,
+			"hints": 4,
+			"recentResults": [false, false, false, true, false],
+			"daysSinceLastAttempt": 0,
+			"thinEvidence": false
+		},
+		"explanation": "You got 2 of 7 tries right on Solving one-step linear equations, and you used a hint on 4 of them. Take your time and work through each step carefully.",
+		"source": "llm",
+		"fallbackReason": null
+	}
 }
 ```
 
@@ -159,11 +159,11 @@ Ties are broken by more attempts first, because that skill is better known, then
 
 On the exported data:
 
-| Student | Chosen skill | Attempts | Right | Hints | Score |
-| --- | --- | --- | --- | --- | --- |
-| Ana (stu_1041) | Solving one-step linear equations | 7 | 2 | 4 | 0.33 |
-| Beto (stu_2277) | Multi-step word problems | 5 | 0 | 2 | 0.14 |
-| Citlali (stu_3390) | Ratios and unit rates | 7 | 3 | 3 | 0.44 |
+| Student            | Chosen skill                      | Attempts | Right | Hints | Score |
+| ------------------ | --------------------------------- | -------- | ----- | ----- | ----- |
+| Ana (stu_1041)     | Solving one-step linear equations | 7        | 2     | 4     | 0.33  |
+| Beto (stu_2277)    | Multi-step word problems          | 5        | 0     | 2     | 0.14  |
+| Citlali (stu_3390) | Ratios and unit rates             | 7        | 3     | 3     | 0.44  |
 
 Citlali has a single attempt in the word problems, answered right. Its score is 0.67, so it neither wins nor is dropped.
 
@@ -175,20 +175,20 @@ What the rule does not do, on purpose: hints, response times and recency do not 
 
 **The pipeline.** `getExplanation` in `apps/api/src/lib/get-explanation.ts` calls the provider with an `AbortSignal` timeout (6 s by default). The provider returns `unknown`, and nothing it returns is trusted. The result is parsed with a strict zod schema and then checked by rules. Any failure uses a fixed template. The function never throws.
 
-| Rule | What it rejects |
-| --- | --- |
-| `shape` | Anything that is not `{ "message": string }` |
-| `length` | Empty, or longer than 100 characters |
-| `sentence_count` | More or fewer than exactly one sentence |
-| `digits` | Any digit. Every number comes from the evidence sentence |
-| `markup` | `< > { } [ ]`, backticks, links |
-| `praise` | Words such as "great" or "perfect". The chosen skill is by definition the student's weakest, so praise about it is never supported by the data |
+| Rule             | What it rejects                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shape`          | Anything that is not `{ "message": string }`                                                                                                   |
+| `length`         | Empty, or longer than 100 characters                                                                                                           |
+| `sentence_count` | More or fewer than exactly one sentence                                                                                                        |
+| `digits`         | Any digit. Every number comes from the evidence sentence                                                                                       |
+| `markup`         | `< > { } [ ]`, backticks, links                                                                                                                |
+| `praise`         | Words such as "great" or "perfect". The chosen skill is by definition the student's weakest, so praise about it is never supported by the data |
 
 Every response says where its text came from: `source` is `llm` or `fallback`, and `fallbackReason` is `timeout`, `provider_error`, `invalid_output` or `disabled`. I tested each path with real requests: a dead Ollama address gives `provider_error`, a 1 ms timeout gives `timeout`, `LLM_PROVIDER=none` gives `disabled`, and with the model running the same request gives `llm`. The fake-provider tests cover all four reasons and check that the evidence sentence is identical in every case.
 
 **How production would show the model failing.** The api writes one structured JSON line per request:
 
-```json
+```text
 {"event":"next_practice_explained","studentId":"stu_1041","skillId":"lin_eq_1","provider":"ollama","model":"qwen2.5:3b","promptVersion":"v1","latencyMs":1221,"source":"llm","fallbackReason":null,"invalidRule":null,"thinEvidence":false}
 ```
 
@@ -210,9 +210,9 @@ The screen gives the student a way to start: a large "Start practicing" button r
 
 That is about 1.2 requests per second on average. One recommendation costs one model call: about USD 0.0006 to 0.0011 with a hosted model at the sizes I measured, and nothing per call with a self-hosted model beyond the machine time, about 1 s of CPU. In this version nothing is cached, so the figures below are the worst case. The rest of the api is negligible: the export is cleaned once at startup and selection is a loop over a few dozen attempts.
 
-| Option | Basis | Estimate |
-| --- | --- | --- |
-| Hosted model | The Claude CLI reported about USD 0.0006 to 0.0011 per call in my tests (a list-price equivalent, measured, not billed) | About USD 60 to 110 per day, USD 1,800 to 3,300 per month |
+| Option             | Basis                                                                                                                                                  | Estimate                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hosted model       | The Claude CLI reported about USD 0.0006 to 0.0011 per call in my tests (a list-price equivalent, measured, not billed)                                | About USD 60 to 110 per day, USD 1,800 to 3,300 per month                                                                                                                    |
 | Self-hosted Ollama | About 1 s per warm call on one desktop CPU, so one machine handles about 1 call per second. I assume peaks of 5 times the average, so about 6 machines | Instances times hourly price. At an assumed USD 0.30 to 0.40 per hour for an 8-vCPU instance (an assumption, to check with the provider), about USD 1,300 to 1,700 per month |
 
 **A cache is necessary to run this at 100,000 requests per day, and I would not launch without one.** The biggest lever is not the choice of provider. Because of the hybrid design, the model input depends only on the skill name and on whether the evidence is thin. In this export that is 6 skills times 2, so 12 distinct prompts. A cache with a few stored sentences per key would turn 100,000 daily model calls into a handful, and the cost would drop to one small instance. With a single api instance an in-process map would be enough, but with several instances each one would keep its own copy and warm up on its own, so a shared cache such as Redis is the right choice: one entry per key, the prompt version inside the key, and a time to live so a new prompt takes effect. I did not build it, to stay inside the time budget and because I did not want to add a dependency without discussing it. It is the first item of the next-week list.
@@ -223,14 +223,14 @@ The behavior with the cache must be analyzed and not assumed: hit rate, latency 
 
 `attempts.json` stays raw and is never edited. `apps/api/src/lib/cleaning.ts` turns it into clean attempts plus a `CleaningReport` with one count per rule, written to the log at startup. On the exported file there are 123 raw rows and 122 clean ones.
 
-| Rule | What it does | Rows in the export |
-| --- | --- | --- |
-| `malformed_row` | Drops a row that fails the schema or has an invalid date | 0 |
-| `unknown_skill`, `unknown_student` | Drops a row whose id is not in the export's lists | 0 and 0 |
-| `duplicate_attempt_id` | Keeps the first row and drops later rows with the same `attempt_id` | 1 (`att_5112`) |
-| `missing_seconds` | Keeps the attempt; the time is unknown, never zero | 2 (`att_5046`, `att_5088`) |
-| `extreme_seconds` | Keeps the attempt for correctness and hints; time below 10 s or above 600 s becomes unknown | 3 (`att_5097`, `att_5110`, `att_5063`) |
-| `after_export` | Keeps the attempt and flags it; the date is not changed | 3 (`att_5042`, `att_5055`, `att_5089`) |
+| Rule                               | What it does                                                                                | Rows in the export                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `malformed_row`                    | Drops a row that fails the schema or has an invalid date                                    | 0                                      |
+| `unknown_skill`, `unknown_student` | Drops a row whose id is not in the export's lists                                           | 0 and 0                                |
+| `duplicate_attempt_id`             | Keeps the first row and drops later rows with the same `attempt_id`                         | 1 (`att_5112`)                         |
+| `missing_seconds`                  | Keeps the attempt; the time is unknown, never zero                                          | 2 (`att_5046`, `att_5088`)             |
+| `extreme_seconds`                  | Keeps the attempt for correctness and hints; time below 10 s or above 600 s becomes unknown | 3 (`att_5097`, `att_5110`, `att_5063`) |
+| `after_export`                     | Keeps the attempt and flags it; the date is not changed                                     | 3 (`att_5042`, `att_5055`, `att_5089`) |
 
 Other assumptions, each of which I would confirm with the data owner:
 
@@ -271,3 +271,5 @@ Next week, in this order:
 ## 10. Git workflow
 
 I worked in several branches (for example `feat/backend/data-cleaning`) and each one has more than one commit, on purpose: the commits show how each piece was built, in an order where each depends only on the ones before it (contract, then logic, then tests, then documentation). Each branch was merged through a pull request into `develop`, with merge commits so the history keeps the branch structure, and `main` receives the integrated result. I do not know the commit guidelines your team uses, so I used a common format: a type and scope prefix (`feat(api):`, `test(web):`, `docs:`) and a short imperative subject in English, with a body when the reason is not obvious. If your team prefers one commit per branch or squash on merge, that is a change at merge time and does not change how I work in a branch.
+
+In a normal workflow I delete each branch after its pull request is merged. I kept them all here so you can read how the work was built. I also keep a backup branch with the previous state of the code before each first version (here, develop-backup-before-first-version-16-10-2026), so I can roll back if something goes wrong.
