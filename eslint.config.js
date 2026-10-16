@@ -1,0 +1,20 @@
+import { defineConfig } from "eslint/config";
+import prettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
+
+export default defineConfig(
+	{ ignores: ["**/node_modules/**"] },
+	tseslint.configs.recommended,
+	{
+		files: ["**/*.ts"],
+		languageOptions: {
+			parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+		},
+		rules: {
+			"@typescript-eslint/no-explicit-any": "error",
+			"@typescript-eslint/no-floating-promises": "error",
+			"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+		},
+	},
+	prettier,
+);

@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# esbuild (used by tsx) ships its binary as a platform package; its postinstall is not needed.
+allowBuilds:
+  esbuild: false
