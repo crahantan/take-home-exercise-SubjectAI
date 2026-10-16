@@ -19,12 +19,12 @@ Working repo for a 6-hour take-home: "What should I practice next, and why?" for
 │   │   └── src/
 │   │       ├── app.ts       bootstrap: json, routes, errorHandler, listen
 │   │       ├── lib/         app-error.ts, logger.ts, llm/ (provider implementations + prompts/)
+│   │       │                cleaning.ts (pure: raw export -> clean attempts + CleaningReport), cleaning.test.ts
 │   │       ├── middleware/  validate-request.middleware.ts, error-handler.middleware.ts, index.ts (barrel)
 │   │       └── modules/next-practice/
 │   │           ├── next-practice.routes.ts
 │   │           ├── next-practice.controllers.ts
 │   │           ├── next-practice.services.ts   orchestration only
-│   │           ├── cleaning.ts                 pure: raw export -> clean attempts + CleaningReport
 │   │           ├── selection.ts                pure: attempts -> chosen skill + evidence
 │   │           ├── explanation.ts              pure: validation of model output + fallback templates
 │   │           ├── *.test.ts
